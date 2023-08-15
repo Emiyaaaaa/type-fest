@@ -17,10 +17,17 @@ type FilterNonNever<T extends unknown[]> = T extends [infer F, ...infer R]
 		? []
 		: T;
 
+type NeverToNull<T> = IsNever<T> extends true ? null : T;
+
 // Handles tuples and arrays
 type JsonifyList<T extends unknown[]> = T extends [infer F, ...infer R]
-	? FilterNonNever<[Jsonify<F>, ...JsonifyList<R>]>
+	? [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
 	: Array<Jsonify<T[number]>>;
+
+// Handles readonly tuples and arrays
+type JsonifyReadonlyList<T extends readonly unknown[]> = T extends readonly [infer F, ...infer R]
+	? readonly [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
+	: ReadonlyArray<Jsonify<T[number]>>;
 
 type FilterJsonableKeys<T extends object> = {
 	[Key in keyof T]: T[Key] extends NotJsonable ? never : Key;
@@ -116,10 +123,10 @@ export type Jsonify<T> = IsAny<T> extends true
 											: Jsonify<J> // Maybe if we look a level deeper we'll find a JsonValue
 										: T extends []
 											? []
-											: T extends [unknown, ...unknown[]]
+											: T extends unknown[]
 												? JsonifyList<T>
-												: T extends ReadonlyArray<infer U>
-													? Array<U extends NotJsonable ? null : Jsonify<U>>
+												: T extends readonly unknown[]
+													? JsonifyReadonlyList<T>
 													: T extends object
 														? JsonifyObject<UndefinedToOptional<T>> // JsonifyObject recursive call for its children
 														: never; // Otherwise any other non-object is removed
