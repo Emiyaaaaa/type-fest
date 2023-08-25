@@ -1,10 +1,13 @@
 import type {JsonPrimitive, JsonValue} from './basic';
 import type {EmptyObject} from './empty-object';
-import type {UndefinedToOptional} from './internal';
+import type {IsBothExtends, UndefinedToOptional} from './internal';
 import type {IsAny} from './is-any';
 import type {IsNever} from './is-never';
+import type { IsUnknown } from './is-unknown';
 import type {NegativeInfinity, PositiveInfinity} from './numeric';
 import type {TypedArray} from './typed-array';
+import { Writable } from './writable';
+import { WritableDeep } from './writable-deep';
 
 // Note: The return value has to be `any` and not `unknown` so it can match `void`.
 type NotJsonable = ((...arguments_: any[]) => any) | undefined | symbol;
@@ -20,14 +23,25 @@ type FilterNonNever<T extends unknown[]> = T extends [infer F, ...infer R]
 type NeverToNull<T> = IsNever<T> extends true ? null : T;
 
 // Handles tuples and arrays
-type JsonifyList<T extends unknown[]> = T extends [infer F, ...infer R]
-	? [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
-	: Array<Jsonify<T[number]>>;
+type JsonifyList<T extends unknown[]> = IsUnknown<T[number]> extends true 
+	? []
+	: T extends []
+	? []
+	: T extends [infer F, ...infer R]
+		? [NeverToNull<Jsonify<F>>, ...JsonifyList<R>]
+		: Array<T[number] extends NotJsonable ? null : Jsonify<T[number]>>;
+
+const a: readonly [1]
+a[0] = 1
 
 // Handles readonly tuples and arrays
-type JsonifyReadonlyList<T extends readonly unknown[]> = T extends readonly [infer F, ...infer R]
-	? readonly [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
-	: ReadonlyArray<Jsonify<T[number]>>;
+type JsonifyList<T extends readonly unknown[]> = IsUnknown<T[number]> extends true 
+	? []
+	: T extends readonly []
+	? []
+	: T extends readonly [infer F, ...infer R]
+		? readonly [NeverToNull<Jsonify<F>>, ...JsonifyList<R>]
+		: ReadonlyArray<T[number] extends NotJsonable ? null : Jsonify<T[number]>>;
 
 type FilterJsonableKeys<T extends object> = {
 	[Key in keyof T]: T[Key] extends NotJsonable ? never : Key;
