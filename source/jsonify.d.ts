@@ -3,31 +3,25 @@ import type {EmptyObject} from './empty-object';
 import type {UndefinedToOptional} from './internal';
 import type {IsAny} from './is-any';
 import type {IsNever} from './is-never';
+import type {IsUnknown} from './is-unknown';
 import type {NegativeInfinity, PositiveInfinity} from './numeric';
 import type {TypedArray} from './typed-array';
+import type {Writable} from './writable';
+import type {WritableDeep} from './writable-deep';
 
 // Note: The return value has to be `any` and not `unknown` so it can match `void`.
 type NotJsonable = ((...arguments_: any[]) => any) | undefined | symbol;
 
-type FilterNonNever<T extends unknown[]> = T extends [infer F, ...infer R]
-	? IsNever<F> extends true
-		? FilterNonNever<R>
-		: [F, ...FilterNonNever<R>]
-	: IsNever<T[number]> extends true
-		? []
-		: T;
-
 type NeverToNull<T> = IsNever<T> extends true ? null : T;
 
 // Handles tuples and arrays
-type JsonifyList<T extends unknown[]> = T extends [infer F, ...infer R]
-	? [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
-	: Array<Jsonify<T[number]>>;
-
-// Handles readonly tuples and arrays
-type JsonifyReadonlyList<T extends readonly unknown[]> = T extends readonly [infer F, ...infer R]
-	? readonly [NeverToNull<Jsonify<F>>, ...FilterNonNever<JsonifyList<R>>]
-	: ReadonlyArray<Jsonify<T[number]>>;
+type JsonifyList<T extends unknown[]> = T extends []
+	? []
+	: T extends [infer F, ...infer R]
+		? [NeverToNull<Jsonify<F>>, ...JsonifyList<R>]
+		: IsUnknown<T[number]> extends true
+			? []
+			: Array<T[number] extends NotJsonable ? null : Jsonify<T[number]>>;
 
 type FilterJsonableKeys<T extends object> = {
 	[Key in keyof T]: T[Key] extends NotJsonable ? never : Key;
@@ -126,7 +120,7 @@ export type Jsonify<T> = IsAny<T> extends true
 											: T extends unknown[]
 												? JsonifyList<T>
 												: T extends readonly unknown[]
-													? JsonifyReadonlyList<T>
+													? JsonifyList<WritableDeep<T>>
 													: T extends object
 														? JsonifyObject<UndefinedToOptional<T>> // JsonifyObject recursive call for its children
 														: never; // Otherwise any other non-object is removed
