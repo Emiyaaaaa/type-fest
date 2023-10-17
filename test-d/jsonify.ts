@@ -47,7 +47,6 @@ expectAssignable<JsonValue>(false);
 expectAssignable<JsonValue>(0);
 expectAssignable<JsonValue>('');
 expectAssignable<JsonValue>([]);
-expectAssignable<JsonValue>([] as const);
 expectAssignable<JsonValue>({});
 expectAssignable<JsonValue>([0]);
 expectAssignable<JsonValue>({a: 0});
@@ -59,6 +58,7 @@ expectAssignable<JsonValue>([{}, {a: 'hi'}, null, 3]);
 expectNotAssignable<JsonValue>(new Date());
 expectNotAssignable<JsonValue>([new Date()]);
 expectNotAssignable<JsonValue>({a: new Date()});
+expectNotAssignable<JsonValue>([] as const);
 expectNotAssignable<JsonValue>(v);
 expectNotAssignable<JsonValue>(x);
 expectNotAssignable<JsonValue>(y);
@@ -348,3 +348,6 @@ expectType<typeof nestedObjectWithNameProperty>(
 // Regression test for https://github.com/sindresorhus/type-fest/issues/629
 declare const readonlyTuple: Jsonify<readonly [1, 2, 3]>;
 expectType<[1, 2, 3]>(readonlyTuple);
+
+declare const jsonValue: Jsonify<JsonValue>;
+expectType<JsonValue>(jsonValue);

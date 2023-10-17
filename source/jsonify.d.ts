@@ -94,7 +94,7 @@ export type Jsonify<T> = IsAny<T> extends true
 	? any
 	: T extends PositiveInfinity | NegativeInfinity
 		? null
-		: T extends JsonPrimitive
+		: T extends JsonValue
 			? T
 			: // Instanced primitives are objects
 			T extends Number
