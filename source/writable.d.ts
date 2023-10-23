@@ -2,7 +2,19 @@ import type {Except} from './except';
 import type {Simplify} from './simplify';
 
 /**
-Create a type that strips `readonly` from all or some of an object's keys. Inverse of `Readonly<T>`.
+Same as `WritableDeep`, but accepts only `Array`s as inputs. Internal helper for `WritableDeep`.
+*/
+type WritableArray<ArrayType extends readonly unknown[]> =
+	ArrayType extends readonly [] ? []
+		: ArrayType extends readonly [...infer U, infer V] ? [...U, V]
+			: ArrayType extends readonly [infer U, ...infer V] ? [U, ...V]
+				: ArrayType extends ReadonlyArray<infer U> ? U[]
+					: ArrayType;
+
+/**
+Create a type that strips `readonly` from array or all or some of an object's keys. Inverse of `Readonly<T>`.
+
+Supports array and tuple. The 2nd argument will be ignored if the input type is not an object.
 
 This can be used to [store and mutate options within a class](https://github.com/sindresorhus/pageres/blob/4a5d05fca19a5fbd2f53842cbf3eb7b1b63bddd2/source/index.ts#L72), [edit `readonly` objects within tests](https://stackoverflow.com/questions/50703834), [construct a `readonly` object within a function](https://github.com/Microsoft/TypeScript/issues/24509), or to define a single model where the only thing that changes is whether or not some of the keys are writable.
 
@@ -32,9 +44,13 @@ type SomeWritable = Writable<Foo, 'b' | 'c'>;
 @category Object
 */
 export type Writable<BaseType, Keys extends keyof BaseType = keyof BaseType> =
-	Simplify<
-	// Pick just the keys that are not writable from the base type.
-	Except<BaseType, Keys> &
-	// Pick the keys that should be writable from the base type and make them writable by removing the `readonly` modifier from the key.
-	{-readonly [KeyType in keyof Pick<BaseType, Keys>]: Pick<BaseType, Keys>[KeyType]}
-	>;
+	BaseType extends readonly unknown[]
+		// Handle array
+		? WritableArray<BaseType>
+		// Handle object
+		: Simplify<
+		// Pick just the keys that are not writable from the base type.
+		Except<BaseType, Keys> &
+		// Pick the keys that should be writable from the base type and make them writable by removing the `readonly` modifier from the key.
+		{-readonly [KeyType in keyof Pick<BaseType, Keys>]: Pick<BaseType, Keys>[KeyType]}
+		>;
