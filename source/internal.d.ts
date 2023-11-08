@@ -2,7 +2,7 @@ import type {Primitive} from './primitive';
 import type {Simplify} from './simplify';
 import type {Trim} from './trim';
 import type {IsAny} from './is-any';
-
+import type {UnknownRecord} from './unknown-record';
 // TODO: Remove for v5.
 export type {UnknownRecord} from './unknown-record';
 
@@ -27,12 +27,16 @@ export type BuildTuple<L extends number, Fill = unknown, T extends readonly unkn
 /**
 Create a object type with the given key `<Key>` and value `<Value>`.
 
-If `Optional` is `true`, the value will be optional. default is `false`.
+It will copy the same key's prefix and optional status from the given object `CopiedFrom` into result.
 */
-export type BuildObject<Key extends PropertyKey, Value, Optional extends boolean = false> =
-	Optional extends true
-		? {[_ in Key]?: Value}
-		: {[_ in Key]: Value};
+export type BuildObject<Key extends PropertyKey, Value, CopiedFrom extends UnknownRecord = {}> =
+	Key extends keyof CopiedFrom
+		? Pick<{[_ in keyof CopiedFrom]: Value}, Key>
+		: Key extends `${infer NumberKey extends number}`
+			? NumberKey extends keyof CopiedFrom
+				? Pick<{[_ in keyof CopiedFrom]: Value}, NumberKey>
+				: {[_ in Key]: Value}
+			: {[_ in Key]: Value};
 
 /**
 Create a tuple of length `A` and a tuple composed of two other tuples,

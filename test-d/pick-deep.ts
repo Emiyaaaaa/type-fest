@@ -1,5 +1,5 @@
 import {expectType} from 'tsd';
-import type {PickDeep} from '../index';
+import type {Paths, PickDeep} from '../index';
 
 declare class ClassA {
 	a: string;
@@ -7,6 +7,14 @@ declare class ClassA {
 
 type BaseType = {
 	string: string;
+	optionalString?: string;
+	array: number[];
+	readonlyArray: readonly number[];
+	tuples: ['foo', 'bar'];
+	objectArray: Array<{a: 1}>;
+	leadingSpreadArray: [...Array<{a: 1}>, {b: 2}];
+	tailSpreadArray: [{a: 1}, {b: {c: 2; other: 2}}, ...Array<{d: 3}>];
+	objectTuple: [{a: 1}];
 	number: number;
 	boolean: boolean;
 	date: Date;
@@ -18,6 +26,8 @@ type BaseType = {
 type Testing = BaseType & {
 	object: BaseType;
 	optionalObject?: Partial<BaseType>;
+	optionalString?: string;
+	readonly readonlyObject: {a: 1};
 	1: BaseType;
 	2?: BaseType;
 };
@@ -25,17 +35,48 @@ type Testing = BaseType & {
 declare const normal: PickDeep<Testing, 'string'>;
 expectType<{string: string}>(normal);
 
-declare const deep: PickDeep<Testing, 'object.number'>;
-expectType<{object: {number: number}}>(deep);
+type DeepType = {
+	nested: {
+		deep: {
+			deeper: {
+				value: string;
+			};
+		};
+	};
+	foo: string;
+};
+declare const deep: PickDeep<DeepType, 'nested.deep.deeper.value'>;
+expectType<{nested: {deep: {deeper: {value: string}}}}>(deep);
+
+type GenericType<T> = {
+	genericKey: T;
+};
+declare const genericTest: PickDeep<GenericType<number>, 'genericKey'>;
+expectType<{genericKey: number}>(genericTest);
 
 declare const union: PickDeep<Testing, 'object.number' | 'object.string'>;
 expectType<{object: {number: number} & {string: string}}>(union);
 
-declare const optional: PickDeep<Testing, 'optionalObject.string'>;
-expectType<{optionalObject?: {string?: string}}>(optional);
+declare const optional: PickDeep<Testing, 'optionalObject.optionalString'>;
+expectType<{optionalObject?: {optionalString?: string}}>(optional);
 
 declare const optionalUnion: PickDeep<Testing, 'optionalObject.string' | 'object.number'>;
 expectType<{optionalObject?: {string?: string}; object: {number: number}}>(optionalUnion);
+
+declare const readonlyTest: PickDeep<Testing, 'readonlyObject.a'>;
+expectType<{readonly readonlyObject: {a: 1}}>(readonlyTest);
+
+declare const array: PickDeep<Testing, 'object.array'>;
+expectType<{object: {array: number[]}}>(array);
+
+declare const readonlyArray: PickDeep<Testing, 'object.readonlyArray'>;
+expectType<{object: {readonlyArray: readonly number[]}}>(readonlyArray);
+
+declare const tuple: PickDeep<Testing, 'object.tuples'>;
+expectType<{object: {tuples: ['foo', 'bar']}}>(tuple);
+
+declare const objectArray: PickDeep<Testing, `object.objectArray.${number}`>;
+expectType<{object: {objectArray: Array<{a: 1}>}}>(objectArray);
 
 declare const date: PickDeep<Testing, 'object.date'>;
 expectType<{object: {date: Date}}>(date);
