@@ -1,7 +1,7 @@
 type MapKey<BaseType> = BaseType extends Map<infer KeyType, unknown> ? KeyType : never;
 type MapValue<BaseType> = BaseType extends Map<unknown, infer ValueType> ? ValueType : never;
 
-export type ArrayEntry<BaseType extends readonly unknown[]> = [number, BaseType[number]];
+export type ArrayEntry<BaseType> = BaseType extends readonly unknown[] ? [number, BaseType[number]] : never;
 export type MapEntry<BaseType> = [MapKey<BaseType>, MapValue<BaseType>];
 export type ObjectEntry<BaseType> = [keyof BaseType, BaseType[keyof BaseType]];
 export type SetEntry<BaseType> = BaseType extends Set<infer ItemType> ? [ItemType, ItemType] : never;
