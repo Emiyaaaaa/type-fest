@@ -61,7 +61,7 @@ The actual implementation of `Entries`.
 */
 type InternalEntries<
 	BaseType,
-	// We noticed that `A extends B` will make `A = B` in some cases. so we need to use the copy of origin type after action `extends`
+	// We noticed that `A extends ...` will change `A`'s inference in some cases. so we need to use the copy of origin type after action `extends`
 	BaseTypeCopy = BaseType,
 > =
 	BaseType extends Map<unknown, unknown> ? MapEntries<BaseTypeCopy>
