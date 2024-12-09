@@ -1,0 +1,16 @@
+{
+	"xo.enable": true,
+	"xo.format.enable": true,
+	"eslint.enable": false,
+	"prettier.enable": false,
+	"[javascript]": {
+		"editor.defaultFormatter": "samverschueren.linter-xo"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "samverschueren.linter-xo"
+	},
+	"[yaml]": {
+		"editor.defaultFormatter": null
+	},
+	"typescript.tsdk": "node_modules/typescript/lib"
+}
