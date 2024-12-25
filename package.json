@@ -17,6 +17,7 @@
 	},
 	"scripts": {
 		"test:source-files-extension": "node script/test/source-files-extension.js",
+		"test:type-exported": "node script/test/type-exported.js",
 		"test:tsc": "tsc",
 		"test:tsd": "tsd",
 		"test:xo": "xo",
