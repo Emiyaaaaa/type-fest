@@ -1,3 +1,4 @@
+
 /* eslint-disable unicorn/prefer-module */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -27,7 +28,8 @@ const parseFile = file => {
 
 	// Parse imports
 	const importMatch = fileText.matchAll(
-		/[export|im]\s*[type]*\s*{([(\s\w,)]*)}\s*from\s*['|"]([.\\].*?)['|"]/g,
+		// eslint-disable-next-line unicorn/better-regex
+		/[export|import]\s*[type]*\s*{([(\s\w,)]*)}\s*from\s*['|"]([.\\].*?)['|"]/g,
 	);
 	for (const matchResult of importMatch) {
 		const [_, typeNames, filePath] = matchResult;
@@ -120,37 +122,43 @@ const parseProject = entryFile => {
  * @param {string} entryFile
  */
 const checkTypeExported = entryFile => {
-	try {
-		const project = parseProject(entryFile);
+	const errors = [];
 
-		// eslint-disable-next-line no-unreachable-loop
-		for (const [file, moduleInfo] of project) {
-			for (const importedModule of moduleInfo.imports.keys()) {
-				const importedVariable = moduleInfo.imports.get(importedModule);
-				if (!importedVariable) {
-					continue;
-				}
+	const project = parseProject(entryFile);
 
-				const exportedVariable = project.get(importedModule).exports;
-
-				for (const variable of importedVariable) {
-					// eslint-disable-next-line max-depth
-					if (!exportedVariable.has(variable)) {
-						console.error(
-							`Variable "${variable}" is not exported in "${importedModule}" but imported in "${file}".`,
-						);
-						process.exitCode = 1;
-						break;
-					}
-				}
+	for (const [file, moduleInfo] of project) {
+		for (const importedModule of moduleInfo.imports.keys()) {
+			const importedVariable = moduleInfo.imports.get(importedModule);
+			if (!importedVariable) {
+				continue;
 			}
 
-			break;
+			const exportedVariable = project.get(importedModule).exports;
+
+			for (const variable of importedVariable) {
+				if (!exportedVariable.has(variable)) {
+					const error = `❌ Variable "${variable}" is not exported in "${importedModule}" but imported in "${file}".\n`;
+					console.error(error);
+					errors.push({missingExportedVariable: variable});
+				}
+			}
 		}
-	} catch (error) {
-		console.error(error);
+	}
+
+	if (errors.length > 0) {
 		process.exitCode = 1;
 	}
+
+	return errors;
 };
 
 checkTypeExported(path.resolve(process.cwd(), 'index.d.ts'));
+
+// Expect error
+const checkTypeExportedError = () => {
+	const errors = checkTypeExported(path.resolve(process.cwd(), './test-d/type-exported/index.d.ts'), true);
+	console.log(errors);
+};
+
+checkTypeExportedError();
+
