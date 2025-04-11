@@ -1,6 +1,4 @@
-import type {IsAny} from './is-any';
-import type {IsNever} from './is-never';
-import type {Or} from './or';
+import type {ArrayLength} from './internal';
 import type {Subtract} from './subtract';
 import type {UnknownArray} from './unknown-array';
 
@@ -83,7 +81,7 @@ T extends UnknownArray
 					...(
 						T[number] extends UnknownArray
 							? InternalArrayFlat<
-							number extends T[number]['length'] ? T[number] : Partial<T[number]>,
+							number extends ArrayLength<T[number]> ? T[number] : Partial<T[number]>,
 							Subtract<Depth, 1>,
 							Options
 							> extends infer Item
@@ -96,14 +94,12 @@ T extends UnknownArray
 				]
 				// Handle fixed length arrays
 				: T extends readonly [infer ArrayItem, ...infer Last]
-					?	ArrayItem extends UnknownArray
+					?	[ArrayItem] extends [UnknownArray]
 						? InternalArrayFlat<Last, Depth, Options, [...Result, ...InternalArrayFlat<ArrayItem, Subtract<Depth, 1>, Options>]>
 						: InternalArrayFlat<Last, Depth, Options, [...Result, ArrayItem]>
-					: T extends Array<infer ArrayItem2>
-						? Or<IsAny<ArrayItem2>, IsNever<ArrayItem2>> extends true
-							? [...Result, ...ArrayItem2[]] // Return never/any[] when input is never/any[]
-							: ArrayItem2 extends UnknownArray
-								? InternalArrayFlat<ArrayItem2, Subtract<Depth, 1>, Options, Result>
-								: [...Result, ...ArrayItem2[]]
-						: [...Result, ...T]
+					: [...Result, ...T]
 	: [];
+
+type A = ArrayFlat<[boolean, [string, number?], boolean]>;
+type B = ArrayFlat<[boolean, Array<[string, number?]>, boolean]>;
+type C = ArrayFlat<[boolean, Array<[string, number?]>, boolean], 2>;

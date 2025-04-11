@@ -99,3 +99,6 @@ expectAssignable<ArrayFlat<ReadonlyNestedComplex, 2>>([1, 'a', 'b', 'c']);
 // Test for recursive flattening with non-array elements
 type RecursiveWithNonArray = [number, [string, {a: number}]];
 expectAssignable<ArrayFlat<RecursiveWithNonArray>>([1, 'string', {a: 42}]);
+
+type A = ArrayFlat<[boolean, [string, number?], boolean]>;
+type B = ArrayFlat<[boolean, Array<[string, number?]>, boolean], 2>;

@@ -30,6 +30,18 @@ It creates a type-safe way to access the element type of `unknown` type.
 */
 export type ArrayElement<T> = T extends readonly unknown[] ? T[0] : never;
 
+export type RequiredPartOfArray<T extends UnknownArray> =
+	T extends readonly [infer U, ...infer V]
+		? [U, ...RequiredPartOfArray<V>]
+		: [];
+
+export type OptionalPartOfArray<T extends UnknownArray> =
+	T extends unknown
+		? T extends readonly [...RequiredPartOfArray<T>, ...infer U]
+			? U
+			: []
+		: never; // Should never happen
+
 /**
 Returns the static, fixed-length portion of the given array, excluding variable-length parts.
 
