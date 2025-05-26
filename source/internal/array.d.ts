@@ -1,4 +1,5 @@
-import type {IfNever} from '../if-never.d.ts';
+import type {If} from '../if.d.ts';
+import type {IsNever} from '../is-never.d.ts';
 import type {UnknownArray} from '../unknown-array.d.ts';
 
 /**
@@ -163,36 +164,32 @@ T extends readonly [...infer U] ?
 /**
 Returns whether the given array `T` is readonly.
 */
-export type IsArrayReadonly<T extends UnknownArray> = IfNever<T, false, T extends unknown[] ? false : true>;
+export type IsArrayReadonly<T extends UnknownArray> = If<IsNever<T>, false, T extends unknown[] ? false : true>;
 
 /**
-An if-else-like type that resolves depending on whether the given array is readonly.
+Returns a boolean for whether every element in an array type extends another type.
 
-@see {@link IsArrayReadonly}
+Note: This type is not designed to be used with non-tuple arrays (like `number[]`), tuples with optional elements (like `[1?, 2?, 3?]`), or tuples that contain a rest element (like `[1, 2, ...number[]]`).
 
 @example
 ```
-import type {ArrayTail} from 'type-fest';
+import type {Every} from 'type-fest';
 
-type ReadonlyPreservingArrayTail<TArray extends readonly unknown[]> =
-	ArrayTail<TArray> extends infer Tail
-		? IfArrayReadonly<TArray, Readonly<Tail>, Tail>
-		: never;
-
-type ReadonlyTail = ReadonlyPreservingArrayTail<readonly [string, number, boolean]>;
-//=> readonly [number, boolean]
-
-type NonReadonlyTail = ReadonlyPreservingArrayTail<[string, number, boolean]>;
-//=> [number, boolean]
-
-type ShouldBeTrue = IfArrayReadonly<readonly unknown[]>;
+type A = Every<[1, 2, 3], number>;
 //=> true
 
-type ShouldBeBar = IfArrayReadonly<unknown[], 'foo', 'bar'>;
-//=> 'bar'
+type B = Every<[1, 2, '3'], number>;
+//=> false
+
+type C = Every<[number, number | string], number>;
+//=> boolean
+
+type D = Every<[true, boolean, true], true>;
+//=> boolean
 ```
 */
-export type IfArrayReadonly<T extends UnknownArray, TypeIfArrayReadonly = true, TypeIfNotArrayReadonly = false> =
-	IsArrayReadonly<T> extends infer Result
-		? Result extends true ? TypeIfArrayReadonly : TypeIfNotArrayReadonly
-		: never; // Should never happen
+export type Every<TArray extends UnknownArray, Type> = TArray extends readonly [infer First, ...infer Rest]
+	? First extends Type
+		? Every<Rest, Type>
+		: false
+	: true;
