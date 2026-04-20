@@ -1,5 +1,5 @@
 /**
-Create a type that makes the given keys non-nullable, where the remaining keys are kept as is.
+Create a type that makes the given keys non-nullable, while keeping the remaining keys as is.
 
 If no keys are given, all keys will be made non-nullable.
 
@@ -27,7 +27,7 @@ type AllNonNullable = SetNonNullable<Foo>;
 */
 export type SetNonNullable<BaseType, Keys extends keyof BaseType = keyof BaseType> = {
 	[Key in keyof BaseType]: Key extends Keys
-		? BaseType[Key] & {} // `& {}` is used instead of `NonNullable<BaseType[Key]>` because `NonNullable` doesn't get simplified.
+		? NonNullable<BaseType[Key]>
 		: BaseType[Key];
 };
 

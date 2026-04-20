@@ -1,6 +1,6 @@
 import type {And} from './and.d.ts';
+import type {ArrayLength} from './array-length.d.ts';
 import type {
-	ArrayLength,
 	IsLeadingSpreadArray,
 	IsMiddleSpreadArray,
 	IsTrailingSpreadArray,

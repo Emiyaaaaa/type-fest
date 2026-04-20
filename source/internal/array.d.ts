@@ -5,13 +5,6 @@ import type {UnknownArray} from '../unknown-array.d.ts';
 import type {IsExactOptionalPropertyTypesEnabled, IfNotAnyOrNever} from './type.d.ts';
 
 /**
-Infer the length of the given array `<T>`.
-
-@link https://itnext.io/implementing-arithmetic-within-typescripts-type-system-a1ef140a6f6f
-*/
-export type ArrayLength<T extends readonly unknown[]> = T extends {readonly length: infer L} ? L : never;
-
-/**
 Matches any unknown array or tuple.
 */
 export type UnknownArrayOrTuple = readonly [...unknown[]];
@@ -121,8 +114,8 @@ type B = StaticPartOfArray<A>;
 */
 export type StaticPartOfArray<T extends UnknownArray, Result extends UnknownArray = []> =
 	T extends unknown
-		? number extends T['length'] ?
-			T extends readonly [infer U, ...infer V]
+		? number extends T['length']
+			? T extends readonly [infer U, ...infer V]
 				? StaticPartOfArray<V, [...Result, U]>
 				: Result
 			: T
@@ -237,11 +230,11 @@ type NormalResult = SetArrayAccess<ReadonlyStringArray, false>;
 ```
 */
 export type SetArrayAccess<T extends UnknownArray, IsReadonly extends boolean> =
-T extends readonly [...infer U] ?
-	IsReadonly extends true
-		? readonly [...U]
-		: [...U]
-	: T;
+	T extends readonly [...infer U]
+		? IsReadonly extends true
+			? readonly [...U]
+			: [...U]
+		: T;
 
 /**
 Returns whether the given array `T` is readonly.

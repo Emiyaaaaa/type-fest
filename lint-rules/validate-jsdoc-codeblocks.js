@@ -2,7 +2,7 @@ import path from 'node:path';
 import ts from 'typescript';
 import {createFSBackedSystem, createVirtualTypeScriptEnvironment} from '@typescript/vfs';
 
-const CODEBLOCK_REGEX = /(?<openingFence>```(?:ts|typescript)?\n)(?<code>[\s\S]*?)```/g;
+const CODEBLOCK_REGEX = /(?<openingFence>```(?:ts|typescript)?\n)(?<code>[\s\S]*?)```/gv;
 const FILENAME = 'example-codeblock.ts';
 const TWOSLASH_COMMENT = '//=>';
 
@@ -24,8 +24,7 @@ const compilerOptions = {
 	exactOptionalPropertyTypes: true,
 };
 
-const virtualFsMap = new Map();
-virtualFsMap.set(FILENAME, '// Can\'t be empty');
+const virtualFsMap = new Map([[FILENAME, '// Can\'t be empty']]);
 
 const rootDir = path.join(import.meta.dirname, '..');
 const system = createFSBackedSystem(virtualFsMap, rootDir, ts);
@@ -41,7 +40,7 @@ function parseCompilerOptions(code) {
 			continue;
 		}
 
-		const match = line.match(/^\s*\/\/ @(\w+): (.*)$/);
+		const match = line.match(/^\s*\/\/ @(\w+): (.*)$/v);
 		if (!match) {
 			// Stop parsing at the first non-matching line
 			return options;
@@ -87,9 +86,24 @@ export const validateJSDocCodeblocksRule = /** @type {const} */ ({
 			incorrectTwoslashType: 'Expected twoslash comment to be: {{expectedComment}}, but found: {{actualComment}}',
 			incorrectTwoslashFormat: 'Expected twoslash comment to be: {{expectedComment}}, but found: {{actualComment}}',
 		},
-		schema: [],
+		schema: [{
+			type: 'object',
+			properties: {
+				verbosityLevels: {
+					type: 'array',
+					uniqueItems: true,
+					items: {
+						minimum: 0,
+						type: 'number',
+					},
+				},
+			},
+		}],
+		/** @type {unknown[]} */
+		defaultOptions: [{
+			verbosityLevels: [],
+		}],
 	},
-	defaultOptions: [],
 	create(context) {
 		const filename = context.filename.replaceAll('\\', '/');
 
@@ -187,9 +201,9 @@ export const validateJSDocCodeblocksRule = /** @type {const} */ ({
 	},
 });
 
-function getLeftmostQuickInfo(env, line, lineOffset) {
+function getLeftmostQuickInfo(env, line, lineOffset, verbosityLevel) {
 	for (let i = 0; i < line.length; i++) {
-		const quickInfo = env.languageService.getQuickInfoAtPosition(FILENAME, lineOffset + i);
+		const quickInfo = env.languageService.getQuickInfoAtPosition(FILENAME, lineOffset + i, undefined, verbosityLevel);
 		if (quickInfo?.displayParts) {
 			return quickInfo;
 		}
@@ -250,12 +264,12 @@ function normalizeType(type, onlySortNumbers = false) {
 
 			if (onlySortNumbers) {
 				// Sort only numeric members while keeping non-numeric members at their original positions
-				const sortedNumericTypes = types.filter(([a]) => isNumeric(a)).sort(([a], [b]) => Number(a) - Number(b));
+				const sortedNumericTypes = types.filter(([a]) => isNumeric(a)).toSorted(([a], [b]) => Number(a) - Number(b));
 				let numericIndex = 0;
 				types = types.map(t => isNumeric(t[0]) ? sortedNumericTypes[numericIndex++][1] : t[1]);
 			} else {
 				types = types
-					.sort(([a], [b]) => a < b ? -1 : (a > b ? 1 : 0))
+					.toSorted(([a], [b]) => a < b ? -1 : (a > b ? 1 : 0))
 					.map(t => t[1]);
 			}
 
@@ -283,7 +297,7 @@ function normalizeType(type, onlySortNumbers = false) {
 		return node;
 	};
 
-	return print(visit(typeNode)).replaceAll(/^( +)/gm, indentation => {
+	return print(visit(typeNode)).replaceAll(/^( +)/gmv, indentation => {
 		// Replace spaces used for indentation with tabs
 		const spacesPerTab = 4;
 		const tabCount = Math.floor(indentation.length / spacesPerTab);
@@ -297,10 +311,10 @@ function getCommentForType(type) {
 
 	if (type.length < 80) {
 		comment = type
-			.replaceAll(/\r?\n\s*/g, ' ') // Collapse into single line
-			.replaceAll(/{\s+/g, '{') // Remove spaces after `{`
-			.replaceAll(/\s+}/g, '}') // Remove spaces before `}`
-			.replaceAll(/;(?=})/g, ''); // Remove semicolons before `}`
+			.replaceAll(/\r?\n\s*/gv, ' ') // Collapse into single line
+			.replaceAll(/\{\s+/gv, '{') // Remove spaces after `{`
+			.replaceAll(/\s+\}/gv, '}') // Remove spaces before `}`
+			.replaceAll(/;(?=\})/gv, ''); // Remove semicolons before `}`
 	}
 
 	return `${TWOSLASH_COMMENT} ${comment.replaceAll('\n', '\n// ')}`;
@@ -323,6 +337,9 @@ function reportTypeMismatch({context, messageId, start, end, data, fix}) {
 function validateTwoslashTypes(context, env, code, codeStartIndex) {
 	const sourceFile = env.languageService.getProgram().getSourceFile(FILENAME);
 	const lines = code.split('\n');
+
+	const specifiedVerbosityLevels = context.options[0].verbosityLevels;
+	const verbosityLevels = [0, ...specifiedVerbosityLevels, Infinity]; // Keep `Infinity` last since suggestion logic relies on the order
 
 	for (const [index, line] of lines.entries()) {
 		const dedentedLine = line.trimStart();
@@ -363,14 +380,16 @@ function validateTwoslashTypes(context, env, code, codeStartIndex) {
 
 		const indent = line.slice(0, actualCommentIndex);
 
-		const quickInfo = getLeftmostQuickInfo(env, previousLine, previousLineOffset);
+		const quickInfos = verbosityLevels
+			.map(verbosity => getLeftmostQuickInfo(env, previousLine, previousLineOffset, verbosity))
+			.filter(qi => qi?.displayParts);
 
-		if (quickInfo?.displayParts) {
-			const expectedType = normalizeType(extractTypeFromQuickInfo(quickInfo));
+		if (quickInfos.length > 0) {
+			const expectedTypes = quickInfos.map(qi => normalizeType(extractTypeFromQuickInfo(qi)));
 			const actualType = normalizeType(rawActualType);
 
-			if (actualType === expectedType) {
-				// If the types are equal, check for formatting errors and unordered numbers in unions
+			if (expectedTypes.includes(actualType)) {
+				// If the types match, check for formatting errors and unordered numbers in unions
 				const expectedComment = getCommentForType(normalizeType(rawActualType, true));
 
 				if (actualComment !== expectedComment) {
@@ -384,7 +403,8 @@ function validateTwoslashTypes(context, env, code, codeStartIndex) {
 					});
 				}
 			} else {
-				const expectedComment = getCommentForType(expectedType);
+				// For suggestion, use infinite verbosity, and it should be the last one
+				const expectedComment = getCommentForType(expectedTypes.at(-1));
 
 				reportTypeMismatch({
 					messageId: 'incorrectTwoslashType',
