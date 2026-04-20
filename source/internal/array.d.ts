@@ -1,3 +1,4 @@
+import type {ArrayLength} from '../array-length.d.ts';
 import type {If} from '../if.d.ts';
 import type {IsNever} from '../is-never.d.ts';
 import type {OptionalKeysOf} from '../optional-keys-of.d.ts';
