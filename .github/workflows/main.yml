@@ -25,7 +25,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
-      - run: npm test
+      - run: nproc
+      - run: |
+          npm run test:tsc & pid_tsc=$!
+          npm run test:tsd & pid_tsd=$!
+          npm run test:xo & pid_xo=$!
+          npm run test:linter & pid_linter=$!
+          wait $pid_tsc && wait $pid_tsd && wait $pid_xo && wait $pid_linter
   types:
     name: TypeScript ${{ matrix.typescript-version }}
     runs-on: ubuntu-latest
