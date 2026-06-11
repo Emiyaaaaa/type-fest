@@ -19,8 +19,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
       - run: nproc
+      - run: lscpu
+      - run: npm install
       - run: |
           npm run test:tsc & pid_tsc=$!
           npm run test:tsd & pid_tsd=$!
